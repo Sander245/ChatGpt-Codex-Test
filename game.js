@@ -2,7 +2,7 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 const hud = {
-hp: document.getElementById("hpValue"),
+  hp: document.getElementById("hpValue"),
   energy: document.getElementById("energyValue"),
   score: document.getElementById("scoreValue"),
   wave: document.getElementById("waveValue"),
@@ -168,11 +168,19 @@ function dropPickup(x, y, bossDrop = false) {
 }
 
 function enemySpawnPoint() {
-  const base = Math.random() < 0.55 ? choice(level.platforms) : null;
+  const base = Math.random() < 0.7 ? choice(level.platforms) : null;
   if (base) {
-    return { x: base.x + rand(24, base.w - 24), y: base.y - 16 };M
+    return { x: base.x + rand(24, base.w - 24), y: base.y - 16 };
   }
   return { x: rand(60, world.width - 60), y: level.floorY - 16 };
+}
+
+function resetEnemyToMap(enemy) {
+  const anchor = choice(level.platforms);
+  enemy.x = anchor.x + anchor.w * 0.5;
+  enemy.y = anchor.y - enemy.h * 0.5 - 2;
+  enemy.vx = rand(-40, 40);
+  enemy.vy = 0;
 }
 
 function makeEnemy(kind = "drone") {
@@ -381,17 +389,30 @@ function updateEnemies(dt) {
         state.bullets.push({ x: e.x, y: e.y - 10, vx: Math.sign(dx) * (e.type === "brute" ? 390 : 480), vy: rand(-130, -40), dmg: e.type === "brute" ? 14 : 8, life: 2.2, team: "enemy" });
       }
 
+      const prevY = e.y;
       e.x += e.vx * dt;
       e.y += e.vy * dt;
 
       const er = { x: e.x - e.w / 2, y: e.y - e.h / 2, w: e.w, h: e.h };
       for (const r of state.platformRects) {
         if (!rectsOverlap(er, r)) continue;
-        if (e.vy >= 0 && er.y + er.h - 6 <= r.y) {
+        const prevBottom = prevY + e.h / 2;
+        const nowBottom = e.y + e.h / 2;
+        if (e.vy >= 0 && prevBottom <= r.y + 4 && nowBottom >= r.y) {
           e.y = r.y - e.h / 2;
           e.vy = 0;
+          break;
         }
       }
+
+      if (e.y + e.h / 2 > level.floorY) {
+        e.y = level.floorY - e.h / 2;
+        e.vy = 0;
+      }
+    }
+
+    if (e.type !== "boss" && e.y > world.height + 40) {
+      resetEnemyToMap(e);
     }
 
     const er = { x: e.x - e.w / 2, y: e.y - e.h / 2, w: e.w, h: e.h };

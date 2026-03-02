@@ -517,9 +517,14 @@ canvas.addEventListener("mousemove", (e) => {
   keys.mx = (e.clientX - rect.left) * sx;
   keys.my = (e.clientY - rect.top) * sy;
 });
-canvas.addEventListener("mousedown", () => { keys.fire = true; });
-window.addEventListener("mouseup", () => { keys.fire = false; });
+canvas.addEventListener("mousedown", (e) => {
+  if (e.button === 0) keys.fire = true;
+});
+window.addEventListener("mouseup", (e) => {
+  if (e.button === 0) keys.fire = false;
+});
 canvas.addEventListener("contextmenu", (e) => { e.preventDefault(); useFieldTech(); });
+window.addEventListener("blur", () => { keys.fire = false; });
 
 buildCollisionRects();
 for (let i = 0; i < 4; i += 1) spawnEnemy();

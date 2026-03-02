@@ -12,15 +12,15 @@ const hud = {
   upgrades: document.getElementById("upgradeLabel"),
 };
 
-const world = { width: 2400, height: canvas.height, gravity: 1950, score: 0, wave: 1, bossAlive: false, t: 0 };
+const world = { width: 2600, height: canvas.height, gravity: 1950, score: 0, wave: 1, bossAlive: false, t: 0 };
 const camera = { x: 0, y: 0 };
 const keys = { left: false, right: false, fire: false, mx: canvas.width / 2, my: canvas.height / 2 };
 const upgrades = new Set();
 
 const WEAPONS = {
-  rifle: { name: "Kinetic Rifle", dmg: 15, speed: 1250, cd: 0.12, spread: 0.02 },
-  scatter: { name: "Scatter Blaster", dmg: 9, speed: 1050, cd: 0.22, spread: 0.22, pellets: 6 },
-  rail: { name: "Pulse Rail", dmg: 40, speed: 1850, cd: 0.5, spread: 0.005 },
+  rifle: { name: "Kinetic Rifle", dmg: 16, speed: 1250, cd: 0.12, spread: 0.018, kind: "ballistic" },
+  scatter: { name: "Scatter Blaster", dmg: 10, speed: 1050, cd: 0.22, spread: 0.2, pellets: 6, kind: "ballistic" },
+  rail: { name: "Pulse Rail", dmg: 110, speed: 2400, cd: 0.34, spread: 0.001, kind: "rail", pierce: 4 },
 };
 
 const FIELD_TECH = {
@@ -31,12 +31,12 @@ const FIELD_TECH = {
 
 const levelPresets = [
   [
-    { x: 160, y: 570, w: 240, h: 24 },
-    { x: 500, y: 520, w: 260, h: 24 },
-    { x: 860, y: 470, w: 250, h: 24 },
-    { x: 1220, y: 420, w: 260, h: 24 },
-    { x: 1580, y: 500, w: 280, h: 24 },
-    { x: 1970, y: 410, w: 240, h: 22 },
+    { x: 140, y: 580, w: 260, h: 24 },
+    { x: 500, y: 520, w: 280, h: 24 },
+    { x: 880, y: 470, w: 250, h: 24 },
+    { x: 1260, y: 420, w: 260, h: 24 },
+    { x: 1660, y: 500, w: 280, h: 24 },
+    { x: 2050, y: 410, w: 240, h: 22 },
   ],
   [
     { x: 220, y: 550, w: 190, h: 22 },
@@ -45,50 +45,27 @@ const levelPresets = [
     { x: 1120, y: 470, w: 220, h: 22 },
     { x: 1420, y: 390, w: 230, h: 22 },
     { x: 1760, y: 520, w: 290, h: 22 },
-    { x: 2100, y: 430, w: 190, h: 22 },
+    { x: 2100, y: 430, w: 210, h: 22 },
   ],
   [
-    { x: 140, y: 590, w: 270, h: 22 },
-    { x: 510, y: 530, w: 220, h: 22 },
-    { x: 810, y: 440, w: 180, h: 22 },
-    { x: 1090, y: 350, w: 180, h: 22 },
-    { x: 1360, y: 450, w: 260, h: 22 },
-    { x: 1700, y: 560, w: 210, h: 22 },
-    { x: 1990, y: 470, w: 260, h: 22 },
+    { x: 160, y: 590, w: 280, h: 22 },
+    { x: 520, y: 520, w: 230, h: 22 },
+    { x: 830, y: 440, w: 190, h: 22 },
+    { x: 1110, y: 350, w: 180, h: 22 },
+    { x: 1400, y: 450, w: 270, h: 22 },
+    { x: 1760, y: 560, w: 220, h: 22 },
+    { x: 2070, y: 470, w: 260, h: 22 },
   ],
 ];
 
 const state = {
   player: {
-    x: 220,
-    y: 200,
-    vx: 0,
-    vy: 0,
-    w: 44,
-    h: 62,
-    hp: 100,
-    energy: 100,
-    maxEnergy: 100,
-    onGround: false,
-    coyote: 0,
-    jumpBuffer: 0,
-    fireCd: 0,
-    fieldCd: 0,
-    dashCd: 0,
-    hitFlash: 0,
-    dir: 1,
-    weapon: "rifle",
-    unlockedWeapons: new Set(["rifle"]),
-    field: "repulse",
+    x: 240, y: 200, vx: 0, vy: 0, w: 44, h: 62, hp: 100, energy: 100, maxEnergy: 100,
+    onGround: false, coyote: 0, jumpBuffer: 0, fireCd: 0, fieldCd: 0, dashCd: 0,
+    hitFlash: 0, dir: 1, weapon: "rifle", unlockedWeapons: new Set(["rifle"]), field: "repulse",
   },
-  bullets: [],
-  enemies: [],
-  particles: [],
-  pickups: [],
-  platformRects: [],
-  dead: false,
-  combo: 1,
-  comboTimer: 0,
+  bullets: [], enemies: [], particles: [], pickups: [], platformRects: [],
+  dead: false, respawnTimer: 0, combo: 1, comboTimer: 0, intermission: 0,
 };
 
 const level = { floorY: world.height - 90, platforms: [...levelPresets[0]] };
@@ -96,16 +73,24 @@ const level = { floorY: world.height - 90, platforms: [...levelPresets[0]] };
 const rand = (a, b) => Math.random() * (b - a) + a;
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const choice = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
 const currentWeapon = () => WEAPONS[state.player.weapon];
 const screenToWorldX = (sx) => sx + camera.x;
 const screenToWorldY = (sy) => sy + camera.y;
+
+function playerRect() {
+  const p = state.player;
+  return { x: p.x - p.w / 2, y: p.y - p.h / 2, w: p.w, h: p.h };
+}
+
+function rectsOverlap(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
 
 function addParticles(x, y, n, hue = 190, force = 220) {
   for (let i = 0; i < n; i += 1) {
     const a = rand(0, Math.PI * 2);
     const s = rand(0.35, 1) * force;
-    state.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.2, 0.8), hue, size: rand(1.5, 3.5) });
+    state.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.2, 0.8), hue, size: rand(1.4, 3.5) });
   }
 }
 
@@ -123,17 +108,8 @@ const UPGRADE_POOL = [
   { id: "vampRounds", name: "Vamp Rounds", apply: () => {} },
   { id: "fieldBattery", name: "Field Battery", apply: () => { state.player.maxEnergy += 35; } },
   { id: "fieldOverclock", name: "Field Overclock", apply: () => { FIELD_TECH.repulse.cd *= 0.75; FIELD_TECH.blink.cd *= 0.75; } },
-  { id: "railAmp", name: "Rail Amplifier", apply: () => { WEAPONS.rail.dmg += 20; } },
+  { id: "railAmp", name: "Rail Amplifier", apply: () => { WEAPONS.rail.dmg += 45; WEAPONS.rail.pierce += 1; } },
 ];
-
-function playerRect() {
-  const p = state.player;
-  return { x: p.x - p.w / 2, y: p.y - p.h / 2, w: p.w, h: p.h };
-}
-
-function rectsOverlap(a, b) {
-  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-}
 
 function chooseUpgrade() {
   const available = UPGRADE_POOL.filter((u) => canUseUpgrade(u.id));
@@ -169,9 +145,7 @@ function dropPickup(x, y, bossDrop = false) {
 
 function enemySpawnPoint() {
   const base = Math.random() < 0.7 ? choice(level.platforms) : null;
-  if (base) {
-    return { x: base.x + rand(24, base.w - 24), y: base.y - 16 };
-  }
+  if (base) return { x: base.x + rand(24, base.w - 24), y: base.y - 16 };
   return { x: rand(60, world.width - 60), y: level.floorY - 16 };
 }
 
@@ -186,10 +160,12 @@ function resetEnemyToMap(enemy) {
 function makeEnemy(kind = "drone") {
   const spot = enemySpawnPoint();
   if (kind === "boss") {
-    return {
-      type: "boss", x: clamp(state.player.x + 380, 260, world.width - 260), y: 190, vx: 0, vy: 0, w: 130, h: 130,
-      hp: 560 + world.wave * 140, maxHp: 560 + world.wave * 140, cd: 0.66, rainCd: 0.3,
-    };
+    const max = 600 + world.wave * 140;
+    return { type: "boss", x: clamp(state.player.x + 380, 260, world.width - 260), y: 190, vx: 0, vy: 0, w: 130, h: 130, hp: max, maxHp: max, cd: 0.66, rainCd: 0.3 };
+  }
+  if (kind === "sentinel") {
+    const max = 820 + world.wave * 180;
+    return { type: "sentinel", x: clamp(state.player.x + 420, 300, world.width - 300), y: 240, vx: 0, vy: 0, w: 160, h: 110, hp: max, maxHp: max, cd: 0.8, mineCd: 1.7, dashCd: 3.2, phase: 0 };
   }
   if (kind === "brute") return { type: "brute", x: spot.x, y: spot.y, vx: rand(-20, 20), vy: 0, w: 58, h: 58, hp: 145 + world.wave * 25, speed: rand(90, 130), cd: rand(1.2, 2.1) };
   if (kind === "skitter") return { type: "skitter", x: spot.x, y: spot.y, vx: rand(-20, 20), vy: 0, w: 34, h: 34, hp: 48 + world.wave * 11, speed: rand(180, 260), cd: rand(0.5, 1.1) };
@@ -199,14 +175,17 @@ function makeEnemy(kind = "drone") {
 function spawnEnemy(kind = "drone") {
   const e = makeEnemy(kind);
   state.enemies.push(e);
-  if (kind === "boss") world.bossAlive = true;
+  if (kind === "boss" || kind === "sentinel") world.bossAlive = true;
 }
 
-function nextWave() {
-  world.wave += 1;
+function buildCollisionRects() {
+  state.platformRects = [{ x: 0, y: level.floorY, w: world.width, h: world.height - level.floorY }];
+  for (const pl of level.platforms) state.platformRects.push({ ...pl });
+}
+
+function startWave() {
   level.platforms = [...choice(levelPresets)];
   buildCollisionRects();
-
   const count = Math.min(5 + world.wave, 14);
   for (let i = 0; i < count; i += 1) {
     const roll = Math.random();
@@ -214,7 +193,13 @@ function nextWave() {
     else if (roll < 0.52) spawnEnemy("skitter");
     else spawnEnemy("drone");
   }
-  if (world.wave % 3 === 0) spawnEnemy("boss");
+  if (world.wave % 6 === 0) spawnEnemy("sentinel");
+  else if (world.wave % 3 === 0) spawnEnemy("boss");
+}
+
+function nextWave() {
+  world.wave += 1;
+  state.intermission = 2.8;
 }
 
 function shoot() {
@@ -224,7 +209,19 @@ function shoot() {
   const pellets = w.pellets || 1;
   for (let i = 0; i < pellets; i += 1) {
     const a = base + rand(-w.spread, w.spread);
-    state.bullets.push({ x: p.x + Math.cos(a) * 28, y: p.y + Math.sin(a) * 18, vx: Math.cos(a) * w.speed, vy: Math.sin(a) * w.speed, dmg: w.dmg * state.combo, life: 1.1, team: "player" });
+    state.bullets.push({
+      x: p.x + Math.cos(a) * 28,
+      y: p.y + Math.sin(a) * 18,
+      vx: Math.cos(a) * w.speed,
+      vy: Math.sin(a) * w.speed,
+      dmg: w.dmg * state.combo,
+      life: w.kind === "rail" ? 0.48 : 1.1,
+      team: "player",
+      kind: w.kind,
+      pierce: w.pierce || 1,
+      hitSet: new Set(),
+      trail: [{ x: p.x, y: p.y }],
+    });
   }
   p.fireCd = w.cd;
   addParticles(p.x + Math.cos(base) * 26, p.y + Math.sin(base) * 10, 8, 196, 130);
@@ -257,11 +254,6 @@ function useFieldTech() {
     for (const e of state.enemies) e.slow = 1.9;
     addParticles(p.x, p.y, 30, 140, 230);
   }
-}
-
-function buildCollisionRects() {
-  state.platformRects = [{ x: 0, y: level.floorY, w: world.width, h: world.height - level.floorY }];
-  for (const pl of level.platforms) state.platformRects.push({ ...pl });
 }
 
 function physicsStep(dt) {
@@ -320,18 +312,19 @@ function physicsStep(dt) {
     addParticles(p.x, p.y + p.h / 2, 8, 180, 120);
   }
 
-  if (keys.fire && p.fireCd <= 0 && !state.dead) shoot();
+  if (keys.fire && p.fireCd <= 0 && !state.dead && state.intermission <= 0) shoot();
 
   p.x = clamp(p.x, p.w / 2, world.width - p.w / 2);
   if (p.y > world.height + 120) {
     p.hp = 0;
     state.dead = true;
+    state.respawnTimer = 5;
   }
 }
 
 function dash() {
   const p = state.player;
-  if (state.dead || p.dashCd > 0 || p.energy < 22) return;
+  if (state.dead || p.dashCd > 0 || p.energy < 22 || state.intermission > 0) return;
   p.energy -= 22;
   p.dashCd = 0.45;
   p.vx = p.dir * 980;
@@ -364,7 +357,7 @@ function updateEnemies(dt) {
       if (e.cd <= 0) {
         e.cd = phase2 ? 0.42 : 0.64;
         const a = Math.atan2(p.y - e.y, p.x - e.x);
-        state.bullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 610, vy: Math.sin(a) * 610, dmg: 12, life: 2, team: "enemy" });
+        state.bullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 610, vy: Math.sin(a) * 610, dmg: 12, life: 2, team: "enemy", kind: "shot" });
       }
 
       if (phase2) {
@@ -374,9 +367,46 @@ function updateEnemies(dt) {
           const rainCount = Math.random() < 0.5 ? 1 : 2;
           for (let r = 0; r < rainCount; r += 1) {
             const rx = clamp(camera.x + rand(40, canvas.width - 40), 30, world.width - 30);
-            state.bullets.push({ x: rx, y: camera.y - 20, vx: rand(-40, 40), vy: rand(520, 680), dmg: 10, life: 2.2, team: "enemy" });
+            state.bullets.push({ x: rx, y: camera.y - 20, vx: rand(-40, 40), vy: rand(520, 680), dmg: 10, life: 2.2, team: "enemy", kind: "rain" });
           }
         }
+      }
+    } else if (e.type === "sentinel") {
+      e.phase = e.hp <= e.maxHp * 0.5 ? 1 : 0;
+      const orbit = e.phase ? 360 : 260;
+      const targetX = clamp(p.x + Math.cos(world.t * 0.9) * orbit, camera.x + 180, camera.x + canvas.width - 180);
+      const targetY = e.phase ? 130 + Math.sin(world.t * 2.1) * 110 : 240 + Math.sin(world.t * 1.2) * 55;
+      e.vx += (targetX - e.x) * dt * 2.8;
+      e.vy += (targetY - e.y) * dt * 3.4;
+      e.vx *= 0.91;
+      e.vy *= 0.91;
+      e.x += e.vx * dt;
+      e.y += e.vy * dt;
+      e.x = clamp(e.x, 140, world.width - 140);
+      e.y = clamp(e.y, 85, 320);
+
+      e.cd -= dt;
+      if (e.cd <= 0) {
+        e.cd = e.phase ? 0.24 : 0.46;
+        for (let k = -1; k <= 1; k += 1) {
+          const a = Math.atan2(p.y - e.y, p.x - e.x) + k * (e.phase ? 0.16 : 0.08);
+          state.bullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * (e.phase ? 700 : 620), vy: Math.sin(a) * (e.phase ? 700 : 620), dmg: e.phase ? 9 : 12, life: 2.2, team: "enemy", kind: "burst" });
+        }
+      }
+
+      e.mineCd -= dt;
+      if (e.mineCd <= 0) {
+        e.mineCd = e.phase ? 0.9 : 1.6;
+        const mx = clamp(p.x + rand(-180, 180), 40, world.width - 40);
+        state.bullets.push({ x: mx, y: camera.y - 12, vx: rand(-20, 20), vy: rand(450, 590), dmg: 11, life: 2.8, team: "enemy", kind: "meteor" });
+      }
+
+      e.dashCd -= dt;
+      if (e.phase && e.dashCd <= 0) {
+        e.dashCd = 2.8;
+        const to = Math.atan2(p.y - e.y, p.x - e.x);
+        e.vx += Math.cos(to) * 500;
+        e.vy += Math.sin(to) * 320;
       }
     } else {
       e.vy += world.gravity * dt;
@@ -386,7 +416,7 @@ function updateEnemies(dt) {
       e.cd -= dt;
       if (Math.abs(dx) < 460 && e.cd <= 0) {
         e.cd = e.type === "skitter" ? rand(0.7, 1.2) : rand(1.1, 2.1);
-        state.bullets.push({ x: e.x, y: e.y - 10, vx: Math.sign(dx) * (e.type === "brute" ? 390 : 480), vy: rand(-130, -40), dmg: e.type === "brute" ? 14 : 8, life: 2.2, team: "enemy" });
+        state.bullets.push({ x: e.x, y: e.y - 10, vx: Math.sign(dx) * (e.type === "brute" ? 390 : 480), vy: rand(-130, -40), dmg: e.type === "brute" ? 14 : 8, life: 2.2, team: "enemy", kind: "shot" });
       }
 
       const prevY = e.y;
@@ -411,9 +441,7 @@ function updateEnemies(dt) {
       }
     }
 
-    if (e.type !== "boss" && e.y > world.height + 40) {
-      resetEnemyToMap(e);
-    }
+    if (e.type !== "boss" && e.type !== "sentinel" && e.y > world.height + 40) resetEnemyToMap(e);
 
     const er = { x: e.x - e.w / 2, y: e.y - e.h / 2, w: e.w, h: e.h };
     const pr = playerRect();
@@ -423,20 +451,23 @@ function updateEnemies(dt) {
       p.vx += Math.sign(pr.x - er.x) * 26;
       state.combo = 1;
       state.comboTimer = 0;
-      if (p.hp <= 0) state.dead = true;
+      if (p.hp <= 0) {
+        state.dead = true;
+        state.respawnTimer = 5;
+      }
     }
 
     if (e.hp <= 0 || e.y > world.height + 250) {
-      if (e.type === "boss") {
+      if (e.type === "boss" || e.type === "sentinel") {
         world.bossAlive = false;
         dropPickup(e.x, e.y, true);
         dropPickup(e.x + 40, e.y - 30, true);
       } else if (Math.random() < 0.46) {
         dropPickup(e.x, e.y, false);
       }
-      addParticles(e.x, e.y, e.type === "boss" ? 50 : 18, e.type === "boss" ? 330 : 14, 320);
+      addParticles(e.x, e.y, e.type === "boss" || e.type === "sentinel" ? 50 : 18, e.type === "sentinel" ? 208 : (e.type === "boss" ? 330 : 14), 320);
       state.enemies.splice(i, 1);
-      const base = e.type === "boss" ? 240 : (e.type === "brute" ? 42 : 24);
+      const base = (e.type === "boss" || e.type === "sentinel") ? 320 : (e.type === "brute" ? 42 : 24);
       world.score += Math.round(base * state.combo);
       state.combo = clamp(state.combo + 0.1, 1, 3);
       state.comboTimer = 3.5;
@@ -452,6 +483,10 @@ function updateBullets(dt) {
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     b.life -= dt;
+    if (b.trail) {
+      b.trail.push({ x: b.x, y: b.y });
+      if (b.trail.length > 14) b.trail.shift();
+    }
     if (b.life <= 0) {
       state.bullets.splice(i, 1);
       continue;
@@ -460,10 +495,15 @@ function updateBullets(dt) {
     if (b.team === "player") {
       for (const e of state.enemies) {
         if (Math.abs(b.x - e.x) < e.w / 2 && Math.abs(b.y - e.y) < e.h / 2) {
+          if (b.hitSet && b.hitSet.has(e)) continue;
           e.hp -= b.dmg;
-          state.bullets.splice(i, 1);
-          addParticles(b.x, b.y, 4, 24, 90);
-          break;
+          if (b.hitSet) b.hitSet.add(e);
+          addParticles(b.x, b.y, b.kind === "rail" ? 9 : 4, b.kind === "rail" ? 194 : 24, b.kind === "rail" ? 170 : 90);
+          b.pierce -= 1;
+          if (b.pierce <= 0) {
+            state.bullets.splice(i, 1);
+            break;
+          }
         }
       }
     } else {
@@ -474,7 +514,10 @@ function updateBullets(dt) {
         state.combo = 1;
         state.comboTimer = 0;
         state.bullets.splice(i, 1);
-        if (p.hp <= 0) state.dead = true;
+        if (p.hp <= 0) {
+          state.dead = true;
+          state.respawnTimer = 5;
+        }
       }
     }
   }
@@ -514,9 +557,54 @@ function updateCamera(dt) {
   camera.x = clamp(camera.x, 0, maxX);
 }
 
+function resetRun() {
+  const p = state.player;
+  p.x = 240;
+  p.y = 180;
+  p.vx = 0;
+  p.vy = 0;
+  p.hp = 100;
+  p.energy = p.maxEnergy;
+  p.fireCd = 0;
+  p.fieldCd = 0;
+  p.dashCd = 0;
+  p.hitFlash = 0;
+  p.weapon = "rifle";
+  p.unlockedWeapons = new Set(["rifle"]);
+  p.field = "repulse";
+
+  upgrades.clear();
+  state.bullets = [];
+  state.enemies = [];
+  state.particles = [];
+  state.pickups = [];
+  state.dead = false;
+  state.respawnTimer = 0;
+  state.combo = 1;
+  state.comboTimer = 0;
+  state.intermission = 2.5;
+  world.score = 0;
+  world.wave = 1;
+  world.bossAlive = false;
+  level.platforms = [...levelPresets[0]];
+  buildCollisionRects();
+  camera.x = 0;
+}
+
 function step(dt) {
   world.t += dt;
-  if (state.dead) return;
+
+  if (state.dead) {
+    state.respawnTimer -= dt;
+    if (state.respawnTimer <= 0) resetRun();
+    return;
+  }
+
+  if (state.intermission > 0) {
+    state.intermission -= dt;
+    updateCamera(dt);
+    if (state.intermission <= 0) startWave();
+  }
 
   physicsStep(dt);
   updateEnemies(dt);
@@ -527,7 +615,7 @@ function step(dt) {
   state.comboTimer -= dt;
   if (state.comboTimer <= 0) state.combo = Math.max(1, state.combo - dt * 0.5);
 
-  if (state.enemies.length === 0 && !world.bossAlive) nextWave();
+  if (state.enemies.length === 0 && !world.bossAlive && state.intermission <= 0) nextWave();
 
   for (let i = state.particles.length - 1; i >= 0; i -= 1) {
     const p = state.particles[i];
@@ -543,26 +631,55 @@ function step(dt) {
 function drawBackground() {
   const g = ctx.createLinearGradient(0, 0, 0, world.height);
   g.addColorStop(0, "#090f1f");
-  g.addColorStop(1, "#040913");
+  g.addColorStop(1, "#050915");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, world.height);
 
-  ctx.fillStyle = "rgba(120, 205, 255, 0.1)";
-  for (let i = -1; i < 10; i += 1) {
-    const x = ((i * 260 + world.t * 18) % (canvas.width + 300)) - 150;
-    ctx.fillRect(x, 65 + i * 24, 110, 4);
+  for (let layer = 0; layer < 3; layer += 1) {
+    const parallax = (layer + 1) * 0.18;
+    ctx.fillStyle = `rgba(${80 + layer * 20}, ${115 + layer * 10}, ${170 + layer * 6}, ${0.06 + layer * 0.03})`;
+    for (let i = -2; i < 14; i += 1) {
+      const x = ((i * 280) - (camera.x * parallax + world.t * (20 + layer * 12)) % 320);
+      const peak = 320 + ((i + layer) % 3) * 90;
+      ctx.beginPath();
+      ctx.moveTo(x, level.floorY);
+      ctx.lineTo(x + 140, peak);
+      ctx.lineTo(x + 280, level.floorY);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
-  ctx.fillStyle = "rgba(88, 136, 208, 0.16)";
-  for (let i = -2; i < 12; i += 1) {
-    const x = (i * 260) - (world.t * 26 % 240);
+  ctx.strokeStyle = "rgba(136, 215, 255, 0.12)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 10; i += 1) {
+    const y = 70 + i * 36 + Math.sin(world.t * 0.7 + i) * 6;
     ctx.beginPath();
-    ctx.moveTo(x, level.floorY);
-    ctx.lineTo(x + 120, 360 + (i % 2) * 80);
-    ctx.lineTo(x + 240, level.floorY);
-    ctx.closePath();
-    ctx.fill();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
   }
+}
+
+function drawBullet(b) {
+  if (b.trail && b.trail.length > 1) {
+    ctx.beginPath();
+    ctx.lineWidth = b.kind === "rail" ? 3.5 : 1.4;
+    for (let i = 0; i < b.trail.length; i += 1) {
+      const t = b.trail[i];
+      const sx = t.x - camera.x;
+      const sy = t.y - camera.y;
+      if (i === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.strokeStyle = b.kind === "rail" ? "rgba(132,245,255,0.55)" : "rgba(154,235,255,0.28)";
+    ctx.stroke();
+  }
+
+  ctx.beginPath();
+  ctx.fillStyle = b.team === "player" ? (b.kind === "rail" ? "#c8fbff" : "#8ff4ff") : "#ff9ecf";
+  ctx.arc(b.x - camera.x, b.y - camera.y, b.kind === "rail" ? 4.5 : 3.2, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawWorld() {
@@ -571,74 +688,81 @@ function drawWorld() {
   ctx.save();
   ctx.translate(-camera.x, -camera.y);
 
-  ctx.fillStyle = "#121e3c";
+  ctx.fillStyle = "#111c38";
   ctx.fillRect(0, level.floorY, world.width, world.height - level.floorY);
-  ctx.strokeStyle = "rgba(126, 227, 255, 0.35)";
-  ctx.lineWidth = 2;
 
   for (const pl of level.platforms) {
-    ctx.fillStyle = "#122646";
+    ctx.fillStyle = "#172b50";
     ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
+    ctx.fillStyle = "rgba(144, 224, 255, 0.26)";
+    ctx.fillRect(pl.x, pl.y, pl.w, 3);
+    ctx.strokeStyle = "rgba(126, 227, 255, 0.22)";
     ctx.strokeRect(pl.x, pl.y, pl.w, pl.h);
   }
 
   for (const p of state.pickups) {
-    const glow = 0.5 + Math.sin(p.pulse) * 0.35;
+    const pulse = 0.45 + Math.sin(p.pulse) * 0.25;
     const hues = { weapon: 48, field: 290, upgrade: 165, energy: 205 };
-    ctx.fillStyle = `hsla(${hues[p.type] || 180}, 95%, 60%, ${glow})`;
+    ctx.fillStyle = `hsla(${hues[p.type] || 180}, 90%, 58%, ${pulse})`;
     ctx.fillRect(p.x - p.w / 2, p.y - p.h / 2, p.w, p.h);
   }
 
-  for (const b of state.bullets) {
-    ctx.fillStyle = b.team === "player" ? "#8ff4ff" : "#ff9ecf";
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.team === "player" ? 3.2 : 3.8, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
   for (const e of state.enemies) {
-    const hue = e.type === "boss" ? 338 : (e.type === "brute" ? 24 : e.type === "skitter" ? 300 : 12);
-    ctx.fillStyle = `hsla(${hue}, 76%, 56%, 0.25)`;
+    const hue = e.type === "boss" ? 338 : (e.type === "sentinel" ? 210 : (e.type === "brute" ? 24 : e.type === "skitter" ? 300 : 12));
+    ctx.fillStyle = `hsla(${hue}, 68%, 52%, 0.2)`;
     ctx.fillRect(e.x - e.w / 2 - 5, e.y - e.h / 2 - 5, e.w + 10, e.h + 10);
     ctx.fillStyle = `hsla(${hue}, 84%, 60%, 0.88)`;
     ctx.fillRect(e.x - e.w / 2, e.y - e.h / 2, e.w, e.h);
 
-    if (e.type === "boss") {
+    if (e.type === "boss" || e.type === "sentinel") {
       const hpRatio = clamp(e.hp / e.maxHp, 0, 1);
       ctx.fillStyle = "rgba(0,0,0,0.55)";
       ctx.fillRect(e.x - 80, e.y - 92, 160, 10);
-      ctx.fillStyle = "#ff80c7";
+      ctx.fillStyle = e.type === "sentinel" ? "#86d7ff" : "#ff80c7";
       ctx.fillRect(e.x - 80, e.y - 92, 160 * hpRatio, 10);
     }
   }
 
+  for (const b of state.bullets) drawBullet(b);
+
   for (const p of state.particles) {
     ctx.fillStyle = `hsla(${p.hue}, 100%, 66%, ${p.life})`;
-    ctx.fillRect(p.x, p.y, p.size, p.size);
+    ctx.fillRect(p.x - camera.x, p.y - camera.y, p.size, p.size);
   }
 
   const pl = state.player;
   ctx.save();
   ctx.translate(pl.x, pl.y);
   ctx.scale(pl.dir, 1);
-  ctx.fillStyle = `rgba(138, 240, 255, ${0.82 + pl.hitFlash * 0.18})`;
+  ctx.fillStyle = `rgba(132, 235, 255, ${0.84 + pl.hitFlash * 0.16})`;
   ctx.fillRect(-pl.w / 2, -pl.h / 2, pl.w, pl.h);
-  ctx.fillStyle = "#d2fbff";
+  ctx.fillStyle = "#d8fbff";
   ctx.fillRect(8, -18, 24, 7);
   ctx.restore();
 
   ctx.restore();
 
+  if (state.intermission > 0 && !state.dead) {
+    ctx.fillStyle = "rgba(4,10,20,0.5)";
+    ctx.fillRect(canvas.width / 2 - 190, 36, 380, 58);
+    ctx.strokeStyle = "rgba(132, 235, 255, 0.35)";
+    ctx.strokeRect(canvas.width / 2 - 190, 36, 380, 58);
+    ctx.fillStyle = "#a7f0ff";
+    ctx.textAlign = "center";
+    ctx.font = "700 24px Inter, sans-serif";
+    ctx.fillText(`Wave ${world.wave} starts in ${Math.max(0, state.intermission).toFixed(1)}s`, canvas.width / 2, 72);
+  }
+
   if (state.dead) {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.64)";
     ctx.fillRect(0, 0, canvas.width, world.height);
     ctx.fillStyle = "#ffb4de";
     ctx.textAlign = "center";
-    ctx.font = "700 58px Inter, sans-serif";
-    ctx.fillText("RUN TERMINATED", canvas.width / 2, world.height / 2 - 14);
+    ctx.font = "700 56px Inter, sans-serif";
+    ctx.fillText("RUN TERMINATED", canvas.width / 2, world.height / 2 - 12);
+    ctx.fillStyle = "#ffe6f4";
     ctx.font = "500 24px Inter, sans-serif";
-    ctx.fillStyle = "#ffe2f2";
-    ctx.fillText("Reload to restart prototype", canvas.width / 2, world.height / 2 + 30);
+    ctx.fillText(`Rebooting in ${Math.max(0, state.respawnTimer).toFixed(1)}s`, canvas.width / 2, world.height / 2 + 28);
   }
 }
 
@@ -704,5 +828,5 @@ window.addEventListener("blur", () => {
 });
 
 buildCollisionRects();
-for (let i = 0; i < 5; i += 1) spawnEnemy(choice(["drone", "skitter", "brute"]));
+state.intermission = 2.5;
 requestAnimationFrame(frame);

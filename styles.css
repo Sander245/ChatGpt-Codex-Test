@@ -49,8 +49,14 @@ body {
 h1 { margin: 0; color: var(--aqua); font-size: clamp(1.1rem, 2.3vw, 1.6rem); }
 p { margin: 0.25rem 0 0; opacity: 0.82; }
 
-.stats { display: flex; flex-wrap: wrap; gap: 1rem; }
-.stats span { font-size: 0.92rem; }
+.stats { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+.stats span {
+  font-size: 0.9rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid rgba(133, 235, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(13, 28, 52, 0.6);
+}
 
 #game {
   width: 100%;

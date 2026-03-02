@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>N-Gon Style Prototype | Side-Scroller Lab</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Side-Scroller Combat Lab</h1>
+          <p>Physics-focused combat sandbox with wave layouts, weapons, field tech, and chained upgrades.</p>
+        </div>
+        <div class="stats">
+          <span>HP <strong id="hpValue">100</strong></span>
+          <span>Energy <strong id="energyValue">100</strong></span>
+          <span>Score <strong id="scoreValue">0</strong></span>
+          <span>Wave <strong id="waveValue">1</strong></span>
+          <span>Combo <strong id="comboValue">x1.0</strong></span>
+        </div>
+      </header>
+
+      <canvas id="game" width="1366" height="768" aria-label="Side-scroller arena canvas"></canvas>
+
+      <section class="panel">
+        <div><strong>Weapon:</strong> <span id="weaponLabel">Kinetic Rifle</span></div>
+        <div><strong>Field Tech:</strong> <span id="fieldLabel">Repulse</span></div>
+        <div><strong>Upgrades:</strong> <span id="upgradeLabel">None</span></div>
+        <div class="hint">Move: A/D · Jump: W/Space · Dash: Shift · Fire: Left Click · Field Tech: Right Click · Swap Weapon: 1/2/3</div>
+      </section>
+    </main>
+    <script src="game.js"></script>
+  </body>
+</html>

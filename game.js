@@ -2,7 +2,7 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 const hud = {
-  hp: document.getElementById("hpValue"),
+hp: document.getElementById("hpValue"),
   energy: document.getElementById("energyValue"),
   score: document.getElementById("scoreValue"),
   wave: document.getElementById("waveValue"),
@@ -170,7 +170,7 @@ function dropPickup(x, y, bossDrop = false) {
 function enemySpawnPoint() {
   const base = Math.random() < 0.55 ? choice(level.platforms) : null;
   if (base) {
-    return { x: base.x + rand(24, base.w - 24), y: base.y - 16 };
+    return { x: base.x + rand(24, base.w - 24), y: base.y - 16 };M
   }
   return { x: rand(60, world.width - 60), y: level.floorY - 16 };
 }

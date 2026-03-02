@@ -667,8 +667,8 @@ function drawBullet(b) {
     ctx.lineWidth = b.kind === "rail" ? 3.5 : 1.4;
     for (let i = 0; i < b.trail.length; i += 1) {
       const t = b.trail[i];
-      const sx = t.x - camera.x;
-      const sy = t.y - camera.y;
+      const sx = t.x;
+      const sy = t.y;
       if (i === 0) ctx.moveTo(sx, sy);
       else ctx.lineTo(sx, sy);
     }
@@ -678,7 +678,7 @@ function drawBullet(b) {
 
   ctx.beginPath();
   ctx.fillStyle = b.team === "player" ? (b.kind === "rail" ? "#c8fbff" : "#8ff4ff") : "#ff9ecf";
-  ctx.arc(b.x - camera.x, b.y - camera.y, b.kind === "rail" ? 4.5 : 3.2, 0, Math.PI * 2);
+  ctx.arc(b.x, b.y, b.kind === "rail" ? 4.5 : 3.2, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -727,7 +727,7 @@ function drawWorld() {
 
   for (const p of state.particles) {
     ctx.fillStyle = `hsla(${p.hue}, 100%, 66%, ${p.life})`;
-    ctx.fillRect(p.x - camera.x, p.y - camera.y, p.size, p.size);
+    ctx.fillRect(p.x, p.y, p.size, p.size);
   }
 
   const pl = state.player;

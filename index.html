@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neon Polygon Arena</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <canvas id="game" width="1280" height="720" aria-label="Neon Polygon Arena"></canvas>
+      <section class="hud">
+        <h1>Neon Polygon Arena</h1>
+        <div class="stats">
+          <span>HP: <strong id="hpValue">100</strong></span>
+          <span>Score: <strong id="scoreValue">0</strong></span>
+          <span>Wave: <strong id="waveValue">1</strong></span>
+        </div>
+        <p>
+          Move with <kbd>WASD</kbd> / <kbd>Arrow Keys</kbd>, aim with mouse, and hold
+          <kbd>Mouse 1</kbd> to fire.
+        </p>
+      </section>
+    </main>
+    <script src="game.js"></script>
+  </body>
+</html>

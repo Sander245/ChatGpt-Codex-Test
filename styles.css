@@ -1,0 +1,84 @@
+:root {
+  color-scheme: dark;
+  --bg: #070911;
+  --panel: rgba(13, 18, 36, 0.76);
+  --line: rgba(121, 225, 255, 0.55);
+  --text: #d8f8ff;
+  --accent: #7ce6ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(124, 230, 255, 0.16), transparent 35%),
+    radial-gradient(circle at 80% 80%, rgba(186, 101, 255, 0.12), transparent 40%),
+    linear-gradient(180deg, #0a1022 0%, var(--bg) 100%);
+  font-family: Inter, Segoe UI, Roboto, sans-serif;
+  color: var(--text);
+}
+
+.game-shell {
+  width: min(95vw, 1280px);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+canvas {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 0 64px rgba(124, 230, 255, 0.2);
+  background: #02050c;
+}
+
+.hud {
+  border: 1px solid rgba(124, 230, 255, 0.35);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1rem, 2.4vw, 1.5rem);
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin: 0.4rem 0;
+}
+
+.stats span {
+  font-size: 0.95rem;
+  opacity: 0.92;
+}
+
+p {
+  margin: 0;
+  opacity: 0.78;
+  font-size: 0.9rem;
+}
+
+kbd {
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.05rem 0.35rem;
+  background: rgba(255, 255, 255, 0.08);
+}
